@@ -17,7 +17,7 @@ from rest_framework.pagination import (
     PageNumberPagination
 )
 
-from e_commerce.models import User
+from e_commerce.models import User, WishList
 from .serializers import UserSerializer, UpdatePasswordUserSerializer, WishListSerializer
 
 
@@ -251,3 +251,4 @@ class WishListViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(user__username=username)
 
         return queryset.order_by('user__username')
+    
