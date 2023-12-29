@@ -1,7 +1,8 @@
 from django.contrib.auth import authenticate
 from django.forms.models import model_to_dict
 from django.shortcuts import get_object_or_404
-
+from .serializers import WishListSerializer, ComicSerializer
+from e_commerce.models import WishList, Comic
 from rest_framework import status
 from rest_framework.authentication import TokenAuthentication, BasicAuthentication
 from rest_framework.decorators import api_view
@@ -25,7 +26,8 @@ from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from rest_framework.response import Response
 from rest_framework.validators import ValidationError
 from rest_framework.views import APIView
-
+from rest_framework.filters import SearchFilter
+from django.db.models import Q
 # NOTE: Importamos este decorador para poder customizar los 
 # parámetros y responses en Swagger, para aquellas
 # vistas de API basadas en funciones y basadas en Clases 
@@ -35,6 +37,7 @@ from drf_yasg import openapi
 
 from e_commerce.api.serializers import *
 from e_commerce.models import Comic
+from rest_framework.pagination import PageNumberPagination
 
 
 mensaje_headder = '''
@@ -93,6 +96,14 @@ def comic_create_api_view(request):
         status=status.HTTP_400_BAD_REQUEST
     )
 
+class ShortResultsSetPagination(PageNumberPagination):
+    page_size = 3   # Cantidad de resultados por página
+
+    # Me va a permitir configurar la cantidad de resultados a mostrar
+    # por página.
+    page_size_query_param = 'page_size'
+    max_page_size = 10 
+    
 
 class GetComicAPIView(ListAPIView):
     __doc__ = f'''{mensaje_headder}
@@ -323,3 +334,20 @@ class LoginUserAPIView(APIView):
             data=user_login_serializer.errors,
             status=status.HTTP_400_BAD_REQUEST
         )
+
+
+class ComicUserAPIView(ListAPIView):
+    serializer_class = ComicSerializer
+    filter_backends = [SearchFilter]
+    search_fields = ['title', 'description']
+    pagination_class = ShortResultsSetPagination
+
+
+    def get_queryset(self):
+        username = self.kwargs['username']
+
+        return Comic.objects.filter(
+            Q(wishlist__user__username=username, wishlist__favorite=True) &
+            Q(wishlist__user__username=username, wishlist__cart=True)
+        ).distinct().order_by('title')
+

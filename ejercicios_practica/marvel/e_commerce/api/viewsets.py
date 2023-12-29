@@ -18,7 +18,7 @@ from rest_framework.pagination import (
 )
 
 from e_commerce.models import User
-from .serializers import UserSerializer, UpdatePasswordUserSerializer
+from .serializers import UserSerializer, UpdatePasswordUserSerializer, WishListSerializer
 
 
 # Genero una clase para configurar el paginado de la API.
@@ -236,3 +236,18 @@ class FilteringUserViewSet(viewsets.GenericViewSet):
             queryset = queryset.filter(is_staff=eval(_is_staff))
 
         return queryset
+
+class WishListViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = WishListSerializer 
+    queryset = serializer_class.Meta.model.objects.all()
+    pagination_class = ShortResultsSetPagination   
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        username = self.request.query_params.get('username', None)
+
+        if username is not None:
+            queryset = queryset.filter(user__username=username)
+
+        return queryset.order_by('user__username')
